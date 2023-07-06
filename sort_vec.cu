@@ -1,15 +1,15 @@
 /****************************************************************************
  *
- * sort_vec.cu - Sort the array with CUDA
+ * sort_vec.cu - Sort vector using CUDA C
  *
  * Created by Afshin Khodaveisi Afshin.khodaveisi@studio.unibo.it
  *
  * ---------------------------------------------------------------------------
  *
- * Using Merge Sort algorithm
+ * Implementing Merge Sort algorithm using Cuda C
  *
  * Run in various condition including:
- * Sequential Implementation
+ * Sequential Implementation (1 block , 1 Thread)
  *
  ****************************************************************************/
 #include <stdlib.h>
