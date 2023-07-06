@@ -4,5 +4,5 @@ Implementing alogrithm which sort the vector. Implementation of sorting algorith
 performance of algorithm in parallel with Cuda C.
 
 ## Run code in Slurm cluster
-sbatch project.sbatch
+$ sbatch project.sbatch
 
