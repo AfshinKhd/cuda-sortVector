@@ -1,5 +1,3 @@
-#### START SLURM CONFIGURATION ####
-
 #!/bin/bash
 #SBATCH --job-name=jsort
 #SBATCH --mail-type=ALL
@@ -8,18 +6,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --output=./sort.log
+#SBATCH --error=./sort.err
 #SBATCH --gres=gpu:1
 
-#### END SLURM CONFIGURATION ####
+nvcc ./sort_vec.cu -o sort_vec
 
-#### START USER SCRIPT ####
+./sort_vec
 
-####source ../venv/bin/activate # activates the Python virtual environment, installed under 'venv' folder
-
-####Compile with:
-nvcc ./src/sort_vec.cu -o cuda-sortvec
-
-####Run with:
-./src/sort_vec.cu
-
-#### END USER SCRIPT ####
