@@ -16,8 +16,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <cuda_runtime.h>
-#define N (1024 * 1024)
-#define BLKDIM (1024)
+#define N (256 * 256)
+#define BLKDIM (128)
 #define SHOWITEMS (100)
 
 
@@ -25,7 +25,7 @@
 void printArray(int arr[], int n) {
 	for(int unused_i=0 ; unused_i< SHOWITEMS ; unused_i++){
 		printf("%d ", *(arr+unused_i));
-		if (unused_i % 20 == 0 && unused_i != 0)
+		if (unused_i % 10 == 0 && unused_i != 0)
 			printf("\n");
 	}
 	printf("...\n");
@@ -143,9 +143,94 @@ __global__ void mergeSortWithThreads(int* arr, int n) {
 				__syncthreads();
 			
 		}
-		
-
 	}
+}
+
+__global__ void mergeSortWithBlocksAndThreads(int* arr, int n) {
+	int currentSize = 1, leftStart;
+	int idx = threadIdx.x + (blockIdx.x * blockDim.x);
+	int partSize = blockDim.x;
+	int nPart = (n + blockDim.x - 1) / blockDim.x;
+
+	while (nPart > 0) {
+		
+			int leftStart = idx * 2 * currentSize;
+			//printf("leftstart: %d , n: %d , partSize: %d , nPart: %d ,idx: %d , currentsize:%d\n", leftStart, n , partSize, nPart,idx, currentSize);
+			if (leftStart + currentSize > n) break;
+			//if (currentSize > 512 * 1 && leftStart > 2095103) printf("SECOND: leftstart: %d , p: %d , n: %d , partSize: %d , nPart: %d ,idx: %d ,currentsize :%d\n", leftStart, p, n, partSize, nPart, idx,currentSize);
+			int mid = leftStart + currentSize - 1;
+			int rightEnd = (leftStart + 2 * currentSize - 1 < n - 1) ? leftStart + 2 * currentSize - 1 : n - 1;
+			int leftSize = mid - leftStart + 1;
+			int rightSize = rightEnd - mid;
+			//if (currentSize > 512 * 1 && leftStart > 2095103) printf("leftsize: %d , rightsize: %d", leftSize, rightSize);
+			//printf("index:%d , mid:%d , rightEnd:%d , leftsize:%d , rightsize:%d\n", index, mid, rightEnd, leftSize, rightSize);
+			int* left = (int*)malloc(leftSize * sizeof(int));
+			int* right = (int*)malloc(rightSize * sizeof(int));
+			//if (currentSize > 512 * 1 && leftStart > 2095103) printf("here1\n");
+			// Copy data from original array to temporary left and right arrays
+			for (int i = 0; i < leftSize; i++) {
+				//if (currentSize > 512 * 1 && leftStart > 2095103) printf("########\n");
+				left[i] = *(arr + leftStart + i);
+			}
+			//if (currentSize > 512 * 1 && leftStart > 2095103) printf("here2\n");
+			for (int i = 0; i < rightSize; i++) {
+				right[i] = *(arr + mid + 1 + i);
+			}
+			//if (currentSize > 512 * 1 && leftStart > 2095103) printf("here3\n");
+			//printf("before : arr0:%d , arr1:%d , arr2:%d , arr3:%d\n", arr[0], arr[1], arr[2], arr[3]);
+			_merge(arr + leftStart, left, leftSize, right, rightSize);
+			//printf("after : arr0:%d , arr1:%d , arr2:%d , arr3:%d\n", arr[0], arr[1], arr[2], arr[3]);
+			free(left);
+			free(right);
+
+			__syncthreads();
+
+			nPart /= 2;
+			currentSize *= 2;
+		
+	}
+}
+
+__global__ void mergeSortWithBlocks(int* arr, int n) {
+	int currentSize, leftStart;
+	int idx = blockIdx.x;
+	//int partSize = 16;
+	int nPart = n/2 ; 
+
+	
+			while (nPart > 0) {
+				currentSize = n / (nPart * 2);
+				int leftStart = idx * 2 * currentSize;
+				if (leftStart + currentSize > n) break;
+				//printf("npart: %d , idx: %d , currentsize: %d , leftStart:%d\n", nPart, idx, currentSize, leftStart);
+				int mid = leftStart + currentSize - 1;
+				int rightEnd = (leftStart + 2 * currentSize - 1 < n - 1) ? leftStart + 2 * currentSize - 1 : n - 1;
+				int leftSize = mid - leftStart + 1;
+				int rightSize = rightEnd - mid;
+				int* left = (int*)malloc(leftSize * sizeof(int));
+				int* right = (int*)malloc(rightSize * sizeof(int));
+
+				for (int i = 0; i < leftSize; i++) {
+					//if (currentSize > 512 * 1 && leftStart > 2095103) printf("########\n");
+					left[i] = *(arr + leftStart + i);
+				}
+				//if (currentSize > 512 * 1 && leftStart > 2095103) printf("here2\n");
+				for (int i = 0; i < rightSize; i++) {
+					right[i] = *(arr + mid + 1 + i);
+				}
+
+				_merge(arr + leftStart, left, leftSize, right, rightSize);
+				//printf("after : arr0:%d , arr1:%d , arr2:%d , arr3:%d\n", arr[0], arr[1], arr[2], arr[3]);
+				free(left);
+				free(right);
+
+				__syncthreads();
+
+				nPart /= 2;
+
+			}
+			
+	
 }
 
 __global__ void mergeSortWithSharedMemmory(int* arr, int n) {
@@ -251,7 +336,9 @@ cudaError_t mergeSortWithThreadsHelper(int* arr, size_t size) {
 
 	// Launch merge sort on the GPU with one thread and one block.
 	tstart = get_time();
-	mergeSortWithThreads << <1, BLKDIM >> > (d_arr, N);
+	//mergeSortWithThreads << <1, BLKDIM >> > (d_arr, N);
+	//mergeSortWithBlocks << <N, 1 >> > (d_arr, N);
+	mergeSortWithBlocksAndThreads << <(N + BLKDIM -1 )/ (BLKDIM * 2), BLKDIM >> > (d_arr, N);
 	//mergeSortWithSharedMemmory << <1, 1, N * sizeof(int) >> > (d_arr, N);
 
 	cudaStatus = cudaGetLastError();
@@ -283,30 +370,28 @@ int main() {
 	int *arr;
 	const size_t size = N * sizeof(int);
 	cudaError_t cudaStatus;
-
-	// Host Space
 	arr = (int*)malloc(size);
+
 	printf("Calculation Is Starting ...\n");
+
 	// Sequential Implementation
-	initilizeArray(arr);
-	// Host code: demonstrating the array before sorting
-	printf("The orginal array is (%d Items): \n", SHOWITEMS);
-	printArray(arr, N);
-	cudaStatus = mergeSortHelper(arr, size);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "mergeSortHelper failed!\n");
-		// Todo: another alternative would be exit program after receiving error in any step
-		//return 1;
-	}
-	printf("The sorted array is: \n");
-	printArray(arr, N);
+	printf("\n########Sequential Implementation########\n");
+	//initilizeArray(arr);
+	//// Host code: demonstrating the array before sorting
+	//printf("The orginal array is (%d Items): \n", SHOWITEMS);
+	//printArray(arr, N);
+	//cudaStatus = mergeSortHelper(arr, size);
+	//if (cudaStatus != cudaSuccess) {
+	//	fprintf(stderr, "mergeSortHelper failed!\n");
+	//	// Todo: another alternative would be exit program after receiving error in any step
+	//	//return 1;
+	//}
+	//printf("The sorted array is: \n");
+	//printArray(arr, N);
 
 	// Parallel Implementation with threads and one block
+	printf("\n########Parallel Impelementation########\n");
 	initilizeArray(arr);
-	/** (arr + 0) = 2;
-	*(arr + 1) = 5;
-	*(arr + 2) = 9;
-	*(arr + 3) = 4;*/
 	printf("The orginal array is (%d Items): \n", SHOWITEMS);
 	printArray(arr, N);
 	cudaStatus = mergeSortWithThreadsHelper(arr, size);
@@ -317,7 +402,7 @@ int main() {
 	printf("The sorted array is: \n");
 	printArray(arr, N);
 
-	printf("Calculation Is Finished!\n");
+	printf("\nCalculation Is Finished!\n");
 
 	free(arr);
 
