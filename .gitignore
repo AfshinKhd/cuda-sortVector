@@ -1,5 +1,5 @@
-/.vs
-/x64
+/src/.vs
+/src/x64
 
 *.sln
 *.vcxproj
