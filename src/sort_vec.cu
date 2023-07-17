@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <cuda_runtime.h>
-#define N (1024 * 1024)
+#define N (512 * 512)
 #define BLKDIM (1024)
 #define BLKSIZE (8 * 8)
 #define SHOWITEMS (100)
