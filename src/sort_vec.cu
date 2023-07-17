@@ -52,12 +52,13 @@ void printArray(int arr[], int n) {
 void showTime(double start, double end , char msg[])
 {
 	double elapsed = end - start ;
-	printf("Elapsed time in %s: %.8f seconds\n",msg, elapsed);
+	printf("Elapsed time in %s: %.6f seconds\n",msg, elapsed);
 }
 
-double get_time(){
-	clock_t	time = clock();
-	return (double)(time / CLOCKS_PER_SEC);
+double get_time() {
+	clock_t time = clock();
+	double elapsed_time = (double)time / CLOCKS_PER_SEC;
+	return elapsed_time;
 }
 
 int generateRandomNumber(int min, int max) {
@@ -473,7 +474,7 @@ int main() {
 	//printf("The sorted array is: \n");
 	//printArray(arr, N);
 
-	// Parallel Implementation with threads and 
+	// Parallel Implementation with threads 
 	printf("\n########Parallel Impelementation - Merge Sort with Threads########\n");
 	initilizeArray(arr, N);
 	//printf("The orginal array is (%d Items): \n", SHOWITEMS);
